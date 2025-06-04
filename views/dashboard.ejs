@@ -1,0 +1,181 @@
+<%- include('layout', { body: `
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="bg-primary text-white rounded p-4">
+            <h1 class="display-5 mb-2">
+                <i class="fas fa-robot me-3"></i>Robot Fleet Management
+            </h1>
+            <p class="lead mb-0">Globomantics Robotics - Internal Operations Dashboard</p>
+            <small class="opacity-75">Real-time monitoring and control of autonomous robot fleet</small>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title"><%= totalRobots %></h4>
+                        <p class="card-text">Total Robots</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-robot fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title"><%= activeRobots %></h4>
+                        <p class="card-text">Active Units</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-power-off fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title"><%= totalRobots - activeRobots %></h4>
+                        <p class="card-text">Maintenance</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-tools fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title">87%</h4>
+                        <p class="card-text">Fleet Efficiency</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-chart-line fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Active Robot Fleet</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Robot Name</th>
+                                <th>Model</th>
+                                <th>Status</th>
+                                <th>Battery</th>
+                                <th>Location</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% robots.forEach(robot => { %>
+                            <tr>
+                                <td>
+                                    <strong><%= robot.name %></strong>
+                                </td>
+                                <td><%= robot.model %></td>
+                                <td>
+                                    <% if (robot.status === 'Active') { %>
+                                        <span class="badge bg-success"><%= robot.status %></span>
+                                    <% } else { %>
+                                        <span class="badge bg-warning"><%= robot.status %></span>
+                                    <% } %>
+                                </td>
+                                <td>
+                                    <div class="progress" style="width: 100px;">
+                                                                                 <div class="progress-bar <%= robot.batteryLevel > 50 ? 'bg-success' : robot.batteryLevel > 20 ? 'bg-warning' : 'bg-danger' %>"
+                                             style="width: <%= robot.batteryLevel %>%">
+                                            <%= robot.batteryLevel %>%
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><%= robot.location %></td>
+                                <td>
+                                    <a href="/robot/<%= robot.id %>" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i> View
+                                    </a>
+                                </td>
+                            </tr>
+                            <% }); %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>System Alerts</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-battery-quarter me-2"></i>
+                    <strong>Low Battery:</strong> Beta-Unit requires charging
+                </div>
+                <div class="alert alert-info">
+                    <i class="fas fa-calendar me-2"></i>
+                    <strong>Scheduled:</strong> Maintenance window tonight 11 PM
+                </div>
+                <div class="alert alert-success">
+                    <i class="fas fa-check me-2"></i>
+                    <strong>Completed:</strong> Charlie-Loader task finished
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Quick Stats</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <i class="fas fa-clock text-primary me-2"></i>
+                        <strong>Uptime:</strong> 99.2%
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-tasks text-success me-2"></i>
+                        <strong>Tasks Completed Today:</strong> 47
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-bolt text-warning me-2"></i>
+                        <strong>Avg. Battery:</strong> 68%
+                    </li>
+                    <li class="mb-0">
+                        <i class="fas fa-map-marker-alt text-info me-2"></i>
+                        <strong>Active Locations:</strong> 3
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+` }) %>

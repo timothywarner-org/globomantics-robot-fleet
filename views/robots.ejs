@@ -1,0 +1,51 @@
+<%- include('layout', { body: `
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-robot me-2"></i>Robot Fleet Management</h2>
+    <button class="btn btn-success">
+        <i class="fas fa-plus me-1"></i>Add New Robot
+    </button>
+</div>
+
+<div class="row">
+    <% robots.forEach(robot => { %>
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><%= robot.name %></h5>
+                <small>Model: <%= robot.model %></small>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <strong>Status:</strong><br>
+                        <% if (robot.status === 'Active') { %>
+                            <span class="badge bg-success"><%= robot.status %></span>
+                        <% } else { %>
+                            <span class="badge bg-warning"><%= robot.status %></span>
+                        <% } %>
+                    </div>
+                    <div class="col-6">
+                        <strong>Battery:</strong><br>
+                        <span class="badge bg-<%= robot.batteryLevel > 50 ? 'success' : robot.batteryLevel > 20 ? 'warning' : 'danger' %>">
+                            <%= robot.batteryLevel %>%
+                        </span>
+                    </div>
+                </div>
+
+                <p><strong>Location:</strong> <%= robot.location %></p>
+                <p><strong>Current Task:</strong> <%= robot.assignedTask %></p>
+                <p><strong>Last Maintenance:</strong> <%= moment(robot.lastMaintenance).format('MMM DD, YYYY') %></p>
+            </div>
+            <div class="card-footer">
+                <a href="/robot/<%= robot.id %>" class="btn btn-primary btn-sm me-2">
+                    <i class="fas fa-eye"></i> Details
+                </a>
+                <button class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-edit"></i> Edit
+                </button>
+            </div>
+        </div>
+    </div>
+    <% }); %>
+</div>
+` }) %>
