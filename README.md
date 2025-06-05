@@ -8,7 +8,7 @@ This is a fictional internal business application for Globomantics Robotics Corp
 
 This application contains **intentionally vulnerable dependencies** for security training purposes. **DO NOT use in production environments.**
 
-## Vulnerable Dependencies (For Demo)
+## Vulnerable Dependencies (For Class Demos)
 
 The following dependencies contain known vulnerabilities for demonstration purposes:
 
