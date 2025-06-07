@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(chmod:*)",
+      "Bash(./example-files/manage-dependabot.sh:*)",
+      "Bash(bash:*)",
+      "Bash(grep:*)",
+      "Bash(gh repo view:*)"
+    ],
+    "deny": []
+  }
+}
