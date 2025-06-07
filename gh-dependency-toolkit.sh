@@ -124,7 +124,11 @@ function review_pr_dependencies() {
     echo -e "${CYAN}===============================${NC}"
 
     # Get the specific PR we know exists (tim/branch-protect #10)
-    local pr_number=10
+    local pr_number=${1:-}
+    if [[ -z "$pr_number" ]]; then
+        echo -n -e "${BLUE}Enter the PR number to analyze: ${NC}"
+        read -r pr_number
+    fi
 
     echo -e "${YELLOW}📋 Analyzing PR #${pr_number} dependency changes:${NC}"
 
@@ -297,7 +301,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
             7)
                 show_ghas_features
                 ;;
-            8)
+            7)
                 echo -e "${PURPLE}🔍 COMPREHENSIVE DEPENDENCY AUDIT${NC}"
                 echo -e "${CYAN}==================================${NC}"
                 show_vulnerability_alerts
