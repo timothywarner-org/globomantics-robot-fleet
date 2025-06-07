@@ -1,6 +1,6 @@
 {
   "name": "globomantics-robot-fleet-manager",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Globomantics Robotics - Internal Robot Fleet Management System | Educational Demo by Tim Warner for Pluralsight GitHub Advanced Security Course",
   "main": "server.js",
   "scripts": {
@@ -37,9 +37,16 @@
     "sqlite3": "5.0.2",
     "validator": "13.5.2",
     "helmet": "4.4.1",
-    "cors": "2.8.5"
+    "cors": "2.8.5",
+    "debug": "2.6.8",
+    "serialize-javascript": "3.0.0",
+    "handlebars": "4.0.0",
+    "ws": "5.2.0",
+    "tar": "4.4.8"
   },
   "devDependencies": {
-    "nodemon": "2.0.7"
+    "nodemon": "2.0.7",
+    "eslint": "6.8.0",
+    "webpack": "4.44.0"
   }
 }
