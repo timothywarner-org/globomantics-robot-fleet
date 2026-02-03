@@ -1,0 +1,92 @@
+name: link-verifier
+description: Comprehensive hyperlink verification and dead-link remediation for markdown documents.
+
+triggers:
+  - verify links
+  - check links
+  - validate links
+  - find broken links
+  - fix dead links
+  - audit link rot
+  - check hyperlinks
+
+workflow:
+  phase_1_extract_and_batch:
+    description: Extract all URLs from the target markdown file(s) and check HTTP status codes in parallel.
+    command: python scripts/link-verifier/verify_links.py <file>
+    output: JSON report to stdout with status for each link.
+
+  phase_2_triage:
+    description: Classify each link by HTTP status.
+    rules:
+      200: No action needed
+      301_302: Update URL to final redirect target
+      403: Flag for manual review (may be geo/auth blocked but still valid)
+      404: Run replacement finder (Phase 3)
+      5xx: Retry once, then flag
+      connection_error: Retry once, then flag
+
+  phase_3_find_replacements:
+    description: For any 404 or confirmed-dead link, find the best substitute URL.
+    command: python scripts/link-verifier/find_replacement.py --url "<dead_url>" --context "<surrounding text>"
+    strategies:
+      - name: Wayback Machine
+        description: Check if an archived version exists and extract the canonical URL it redirected to.
+      - name: Domain search
+        description: Search the same domain for the content (handles restructured docs).
+      - name: Web search
+        description: Search for the page title + domain to find where content moved.
+      - name: Semantic search
+        description: Search for the topic described by the surrounding markdown context.
+    scoring:
+      domain_match: Same domain as original = highest trust (weight 0.30)
+      path_similarity: Levenshtein distance to original path (weight 0.25)
+      content_relevance: Page title/description matches context (weight 0.25)
+      authority: Prefer official docs domains (weight 0.20)
+
+  phase_4_apply_fixes:
+    description: Apply fixes to the markdown file based on triage and replacement results.
+    rules:
+      redirects: Silently update the URL in the markdown.
+      high_confidence_replacement: Update URL (score >= 0.8) and note the change.
+      medium_confidence_replacement: Present options to user via AskUserQuestion (score 0.5-0.8).
+      no_replacement: Flag in summary table for manual resolution.
+
+  phase_5_verification:
+    description: Re-run verify_links.py on the updated file to confirm zero broken links remain.
+
+output_format: |
+  ## Link Verification Report
+
+  | # | URL | Status | Action Taken |
+  |---|-----|--------|-------------|
+  | 1 | https://example.com/good | 200 OK | None |
+  | 2 | https://example.com/moved | 301 -> new | Updated URL |
+  | 3 | https://example.com/dead | 404 | Replaced with https://example.com/new |
+  | 4 | https://example.com/unknown | 403 | Flagged for manual review |
+
+  Total: X links checked, Y OK, Z fixed, W flagged
+
+scripts:
+  verify_links: scripts/link-verifier/verify_links.py
+  find_replacement: scripts/link-verifier/find_replacement.py
+  requirements: scripts/link-verifier/requirements.txt
+
+installation: pip install -r scripts/link-verifier/requirements.txt
+
+tips:
+  - Run verification in parallel batches of 4 agents for large documents.
+  - For GitHub docs, URL structure changes frequently. Domain-search catches most of these.
+  - For Microsoft Learn docs, use microsoft_docs_search MCP tool as additional signal.
+  - 403 from government sites are often false negatives due to bot protection. Flag but do not replace.
+  - Always follow redirects to final destination to get canonical URL.
+
+authority_domains:
+  docs.github.com: 1.0
+  github.com: 0.95
+  learn.microsoft.com: 1.0
+  developer.mozilla.org: 0.95
+  nvd.nist.gov: 0.95
+  cisa.gov: 0.9
+  spdx.dev: 0.9
+  owasp.org: 0.9

@@ -1,120 +1,121 @@
-# Dependabot Configuration for Enterprise JavaScript Projects
-# This represents the 80% use case for production teams
-# Module 3: Automated Dependency Management - Tim Warner
+# ============================================================================
+# Dependabot Configuration - Globomantics Robot Fleet Manager
+# Pluralsight GHAS Course | Module 6: Dependabot Config, Rules & Dep Review
+# ============================================================================
+# KEY CONCEPT: version 2 is the ONLY valid schema version (exam tip!)
+# DOCS: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 
 version: 2
+
+# ============================================================================
+# REGISTRIES: Private package sources (npm, Docker, Maven, etc.)
+# Uncomment if your org uses GitHub Packages, Artifactory, or similar.
+# ============================================================================
+# registries:
+#   npm-github:
+#     type: npm-registry
+#     url: https://npm.pkg.github.com
+#     token: ${{ secrets.GPR_TOKEN }}
+
 updates:
-    # NPM Dependencies - Primary Package Management
+  # --------------------------------------------------------------------------
+  # ECOSYSTEM 1: npm (Node.js dependencies from package.json)
+  # --------------------------------------------------------------------------
   - package-ecosystem: "npm"
     directory: "/"
+
+    # SCHEDULING: daily | weekly | monthly
+    # PRs land when Nashville devs are at their desks, not at 3 AM
     schedule:
-      interval: "daily"  # Security-first: Daily checks for vulnerabilities
+      interval: "daily"
       time: "09:00"
-      timezone: "America/New_York"
+      timezone: "America/Chicago" # Nashville, TN (Central Time)
 
-    open-pull-requests-limit: 5
+    # Cap open PRs to avoid flooding the team
+    open-pull-requests-limit: 10
 
-    # Enterprise PR Management
-    reviewers:
-      - "timothywarner-org"
-      - "github-copilot[bot]"
-    assignees:
-      - "timothywarner-org"
+    # Labels for filtering and Actions-based automation
     labels:
       - "dependencies"
       - "security"
       - "automated"
 
-    # Group related updates to reduce PR noise
-    groups:
-      # Production dependencies - careful approach
-      production-dependencies:
-        patterns:
-          - "*"
-        exclude-patterns:
-          - "@types/*"
-          - "eslint*"
-          - "webpack*"
-          - "*test*"
-        update-types:
-          - "patch"
-          - "minor"
-
-      # Development tools - more aggressive
-      development-dependencies:
-        patterns:
-          - "@types/*"
-          - "eslint*"
-          - "webpack*"
-          - "*test*"
-          - "nodemon"
-        update-types:
-          - "patch"
-          - "minor"
-          - "major"
-
-    # Version strategy for enterprise CI/CD
-    versioning-strategy: "increase"
-
-    # Commit message format for conventional commits
+    # Structured commit messages for clean git history
+    # Produces: "deps(express): bump express from 4.17.1 to 4.18.2"
     commit-message:
       prefix: "deps"
-      prefix-development: "build"
       include: "scope"
 
-    # Target branch for updates (follows GitFlow)
-    target-branch: "main"
+    # -----------------------------------------------------------------------
+    # GROUPS: Combine related updates into fewer PRs
+    # Without grouping: 15 React packages = 15 PRs. With grouping: 1 PR.
+    # Three grouping strategies: patterns, update-types, dependency-type
+    # -----------------------------------------------------------------------
+    groups:
+      # Production minor+patch in one PR (low-risk batch)
+      production-minor-patch:
+        dependency-type: "production"
+        update-types:
+          - "minor"
+          - "patch"
 
-    # Rebase strategy for cleaner history
-    rebase-strategy: "auto"
+      # Dev tooling updates batched separately
+      development-dependencies:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
 
-    # Vendor specific configurations
-    vendor:
-      # Only allow known, trusted registries
-      - "registry.npmjs.org"
+      # Pattern-based: group all Express-related packages together
+      express-ecosystem:
+        patterns:
+          - "express*"
+          - "body-parser"
+          - "cookie-parser"
+          - "cors"
+          - "helmet"
 
-    # Ignore specific packages that cause issues
+    # -----------------------------------------------------------------------
+    # VERSIONING STRATEGY: How Dependabot picks target versions
+    # Options: lockfile-only | auto | widen | increase | increase-if-necessary
+    # -----------------------------------------------------------------------
+    versioning-strategy: auto
+
+    # -----------------------------------------------------------------------
+    # ALLOW / IGNORE: Fine-grained control over what gets updated
+    # -----------------------------------------------------------------------
+    # Only allow production + development dependency updates
+    allow:
+      - dependency-type: "all"
+
+    # Ignore major bumps for packages that need manual migration
     ignore:
-      # Ignore major version bumps for critical packages
-      - dependency-name: "express"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "lodash"
+      - dependency-name: "sqlite3"
         update-types: ["version-update:semver-major"]
 
-      # Ignore packages with known breaking changes
-      - dependency-name: "moment"
-        # Moment.js is in maintenance mode
-
-  # GitHub Actions - Keep CI/CD current
+  # --------------------------------------------------------------------------
+  # ECOSYSTEM 2: GitHub Actions (keep CI/CD workflows current)
+  # EXAM TIP: github-actions is a valid ecosystem -- often forgotten!
+  # --------------------------------------------------------------------------
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "monthly"
+      interval: "weekly"
       day: "monday"
       time: "09:00"
+      timezone: "America/Chicago"
+
+    labels:
+      - "dependencies"
+      - "ci-cd"
+      - "automated"
 
     commit-message:
       prefix: "ci"
+      include: "scope"
 
-    reviewers:
-      - "timothywarner-org"
-
-    # Group all action updates together
     groups:
-      github-actions:
+      # Batch all Actions updates into a single weekly PR
+      actions-all:
         patterns:
           - "*"
-        update-types:
-          - "patch"
-          - "minor"
-          - "major"
-
-# Enterprise Best Practices Demonstrated:
-# ✅ Security-first: Daily security checks
-# ✅ Noise reduction: Grouped updates
-# ✅ Team workflow: Proper reviewers/assignees
-# ✅ CI/CD friendly: Version strategy + rebase
-# ✅ Risk management: Ignore major breaking changes
-# ✅ Compliance: Vendor restrictions
-# ✅ Conventional commits: Standardized messages
-# ✅ Multi-ecosystem: NPM + GitHub Actions
