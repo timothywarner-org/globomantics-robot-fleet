@@ -8,7 +8,7 @@ This tutorial walks through configuring real-time Slack alerts for the Globomant
 
 ```javascript
 const STRIPE_API_KEY =
-  sk_test_51FAKEDEMO8Y9qXn1LrP2dH0KkMZQxJmVwC3R7S6B5A4T9E8Y;
+ sk_live_51N8aZxHFAKEd3m0KEYtX8C1F7zWJHc2y9p5EwBqQJ9N4Z
 ```
 
 ## Prerequisites
