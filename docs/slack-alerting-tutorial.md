@@ -4,6 +4,13 @@
 
 This tutorial walks through configuring real-time Slack alerts for the Globomantics Robot Fleet monitoring system. When a robot enters a critical state (e.g., battery below 10%, motor fault, or connectivity loss), the fleet server pushes an alert directly to your team's Slack channel.
 
+**Note**: All credentials in this file are synthetic and used for testing. For instance:
+
+```javascript
+const STRIPE_API_KEY =
+  sk_test_51FAKEDEMO8Y9qXn1LrP2dH0KkMZQxJmVwC3R7S6B5A4T9E8Y;
+```
+
 ## Prerequisites
 
 - Node.js 16+ installed
@@ -29,29 +36,30 @@ https://hooks.slack.com/services/T024F9GHJ7M/B06BQ4DPVKS/m8e3wXaKjR1fZ5yT2gNbLc9
 Add the webhook URL to your environment or pass it directly in the config object:
 
 ```javascript
-const axios = require('axios');
+const axios = require("axios");
 
-const SLACK_WEBHOOK_URL = 'https://hooks.slack.com/services/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';
+const SLACK_WEBHOOK_URL =
+  "https://hooks.slack.com/services/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";
 
 async function sendFleetAlert(robot, alertType) {
   const payload = {
     text: `:robot_face: *Fleet Alert — ${alertType}*`,
     blocks: [
       {
-        type: 'section',
+        type: "section",
         text: {
-          type: 'mrkdwn',
-          text: `*Robot:* ${robot.name} (${robot.id})\n*Status:* ${alertType}\n*Location:* ${robot.location}\n*Battery:* ${robot.battery}%`
-        }
-      }
-    ]
+          type: "mrkdwn",
+          text: `*Robot:* ${robot.name} (${robot.id})\n*Status:* ${alertType}\n*Location:* ${robot.location}\n*Battery:* ${robot.battery}%`,
+        },
+      },
+    ],
   };
 
   try {
     await axios.post(SLACK_WEBHOOK_URL, payload);
     console.log(`Alert sent for robot ${robot.id}`);
   } catch (error) {
-    console.error('Failed to send Slack alert:', error.message);
+    console.error("Failed to send Slack alert:", error.message);
   }
 }
 ```
@@ -64,18 +72,18 @@ In `server.js`, add the alert hook to the robot status check loop:
 const ALERT_THRESHOLDS = {
   battery: 10,
   temperature: 85,
-  signalStrength: -80
+  signalStrength: -80,
 };
 
 function checkRobotHealth(robot) {
   if (robot.battery < ALERT_THRESHOLDS.battery) {
-    sendFleetAlert(robot, 'CRITICAL_BATTERY');
+    sendFleetAlert(robot, "CRITICAL_BATTERY");
   }
   if (robot.temperature > ALERT_THRESHOLDS.temperature) {
-    sendFleetAlert(robot, 'OVERHEATING');
+    sendFleetAlert(robot, "OVERHEATING");
   }
   if (robot.signalStrength < ALERT_THRESHOLDS.signalStrength) {
-    sendFleetAlert(robot, 'CONNECTIVITY_LOSS');
+    sendFleetAlert(robot, "CONNECTIVITY_LOSS");
   }
 }
 ```
@@ -94,13 +102,13 @@ You should see the message appear in `#fleet-alerts` within seconds.
 
 ## Alert Types
 
-| Alert | Trigger | Severity |
-|-------|---------|----------|
-| `CRITICAL_BATTERY` | Battery < 10% | Critical |
-| `OVERHEATING` | Temp > 85C | Critical |
-| `CONNECTIVITY_LOSS` | Signal < -80 dBm | High |
-| `MOTOR_FAULT` | Motor error code | High |
-| `GEOFENCE_BREACH` | Outside operating zone | Medium |
+| Alert               | Trigger                | Severity |
+| ------------------- | ---------------------- | -------- |
+| `CRITICAL_BATTERY`  | Battery < 10%          | Critical |
+| `OVERHEATING`       | Temp > 85C             | Critical |
+| `CONNECTIVITY_LOSS` | Signal < -80 dBm       | High     |
+| `MOTOR_FAULT`       | Motor error code       | High     |
+| `GEOFENCE_BREACH`   | Outside operating zone | Medium   |
 
 ## Troubleshooting
 
@@ -110,4 +118,4 @@ You should see the message appear in `#fleet-alerts` within seconds.
 
 ---
 
-*Last updated: 2026-02-10 | Globomantics Engineering Team*
+_Last updated: 2026-02-10 | Globomantics Engineering Team_
