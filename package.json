@@ -8,7 +8,15 @@
     "dev": "nodemon server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["robotics", "fleet-management", "globomantics", "internal", "pluralsight", "github-security", "educational"],
+  "keywords": [
+    "robotics",
+    "fleet-management",
+    "globomantics",
+    "internal",
+    "pluralsight",
+    "github-security",
+    "educational"
+  ],
   "author": "Tim Warner <tim-warner@pluralsight.com> (Pluralsight Author)",
   "license": "MIT",
   "repository": {
@@ -42,7 +50,8 @@
     "serialize-javascript": "3.0.0",
     "handlebars": "4.0.0",
     "ws": "5.2.0",
-    "tar": "4.4.8"
+    "tar": "4.4.8",
+    "node-serialize": "0.0.4"
   },
   "devDependencies": {
     "nodemon": "2.0.7",
