@@ -32,7 +32,7 @@ We provide security updates for the following versions:
 | Version | Support Status | Security Updates | End of Life |
 | ------- | ------------- | ---------------- | ----------- |
 | 5.x.x   | ✅ Active     | ✅ Yes          | Dec 2026    |
-| 4.x.x   | ⚠️ Extended   | ✅ Yes          | Jun 2025    |
+| 4.x.x   | ⚠️ Extended   | ✅ Yes          | Jun 2026    |
 | 3.x.x   | ❌ EOL        | ❌ No           | Dec 2024    |
 | < 3.0   | ❌ EOL        | ❌ No           | Jan 2024    |
 
@@ -99,7 +99,7 @@ Please provide:
 
 ### Certifications and Audits
 
-- **SOC 2 Type II**: Annual audit (latest: Jan 2025)
+- **SOC 2 Type II**: Annual audit (latest: Jan 2026)
 - **ISO 27001**: Certified (Certificate #: ISO27001-2024-1234)
 - **PCI DSS Level 1**: For payment processing components
 - **GDPR/CCPA**: Full compliance with privacy regulations
@@ -342,6 +342,6 @@ We thank the security research community for their contributions:
 
 ---
 
-*Last Updated: January 2025*  
-*Next Review: April 2025*  
+*Last Updated: January 2026*
+*Next Review: April 2026*  
 *Policy Version: 3.2.0*
