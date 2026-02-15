@@ -37,7 +37,7 @@ cargo run -- health sample-telemetry.json    # fleet health analysis
 **Single-server Express app** (`server.js`) serving EJS templates with in-memory mock data (no database).
 
 - `server.js` — Entire backend: routes, middleware, mock data (3 robots, 1 admin user), and intentional vulnerabilities
-- `views/*.ejs` — EJS templates (`layout.ejs` base template, `dashboard.ejs`, `robots.ejs`, `robot-detail.ejs`, `maintenance.ejs`)
+- `views/*.ejs` — EJS templates, each a standalone full-page HTML document (no express-ejs-layouts): `dashboard.ejs`, `robots.ejs`, `robot-detail.ejs`, `maintenance.ejs`, `error.ejs`. Note: `layout.ejs` still exists but is unused dead code.
 - `public/` — Static assets (CSS, JS, SVG logo)
 
 ### Rust Telemetry CLI (`rust-telemetry-cli/`)
