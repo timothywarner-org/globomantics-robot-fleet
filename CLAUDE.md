@@ -24,6 +24,14 @@ npx eslint .
 
 There is no build step — the app runs directly via Node.js/Express.
 
+```bash
+# Rust telemetry CLI (requires Rust toolchain)
+cd rust-telemetry-cli
+cargo build --release
+cargo run -- sample                          # print sample telemetry JSON
+cargo run -- health sample-telemetry.json    # fleet health analysis
+```
+
 ## Architecture
 
 **Single-server Express app** (`server.js`) serving EJS templates with in-memory mock data (no database).
@@ -31,6 +39,15 @@ There is no build step — the app runs directly via Node.js/Express.
 - `server.js` — Entire backend: routes, middleware, mock data (3 robots, 1 admin user), and intentional vulnerabilities
 - `views/*.ejs` — EJS templates (`layout.ejs` base template, `dashboard.ejs`, `robots.ejs`, `robot-detail.ejs`, `maintenance.ejs`)
 - `public/` — Static assets (CSS, JS, SVG logo)
+
+### Rust Telemetry CLI (`rust-telemetry-cli/`)
+
+Standalone Rust binary for fleet telemetry decoding, health analysis, and report generation. Provides a multi-language scanning target for Semgrep and CodeQL demos alongside the JavaScript codebase.
+
+- `src/main.rs` — CLI entry point and argument routing
+- `src/telemetry.rs` — Data structures, JSON parsing, sample data generation
+- `src/fleet.rs` — Health analysis engine with configurable alert thresholds
+- `src/report.rs` — Formatted text report output
 
 ### Intentional Vulnerabilities (for demo purposes)
 

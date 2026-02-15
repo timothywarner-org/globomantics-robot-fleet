@@ -1,0 +1,53 @@
+[
+  {
+    "robot_id": "RBT-001",
+    "robot_name": "Atlas",
+    "timestamp": "2025-06-15T10:30:00Z",
+    "battery_level": 87.5,
+    "cpu_temp_celsius": 42.3,
+    "signal_strength_dbm": -45,
+    "status": "active",
+    "location": {
+      "zone": "A1",
+      "x": 12.5,
+      "y": 34.8
+    },
+    "task": "package_sorting",
+    "error_codes": []
+  },
+  {
+    "robot_id": "RBT-002",
+    "robot_name": "Bolt",
+    "timestamp": "2025-06-15T10:30:00Z",
+    "battery_level": 23.1,
+    "cpu_temp_celsius": 68.9,
+    "signal_strength_dbm": -72,
+    "status": "charging",
+    "location": {
+      "zone": "C3",
+      "x": 5.0,
+      "y": 10.2
+    },
+    "task": null,
+    "error_codes": []
+  },
+  {
+    "robot_id": "RBT-003",
+    "robot_name": "Cog",
+    "timestamp": "2025-06-15T10:30:00Z",
+    "battery_level": 55.0,
+    "cpu_temp_celsius": 91.2,
+    "signal_strength_dbm": -88,
+    "status": "error",
+    "location": {
+      "zone": "B2",
+      "x": 22.1,
+      "y": 7.4
+    },
+    "task": "inventory_scan",
+    "error_codes": [
+      1012,
+      2048
+    ]
+  }
+]

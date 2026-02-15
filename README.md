@@ -59,6 +59,20 @@ npm start
 
 Visit `http://localhost:3000` to access the Globomantics Robot Fleet Manager.
 
+### Rust Telemetry CLI
+
+A standalone Rust utility for fleet telemetry analysis, also used as a multi-language code scanning target (Semgrep + CodeQL).
+
+```bash
+cd rust-telemetry-cli
+cargo build --release
+cargo run -- sample > telemetry.json
+cargo run -- health telemetry.json
+cargo run -- report telemetry.json
+```
+
+See [`rust-telemetry-cli/README.md`](rust-telemetry-cli/README.md) for full documentation.
+
 ## 📊 Demo Workflow
 
 1. **Branch Protection** - Main branch protected with required reviews
