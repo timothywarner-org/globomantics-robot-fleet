@@ -12,3 +12,6 @@ logs
 .DS_Store
 .vscode/
 *.code-workspace
+
+# Rust
+rust-telemetry-cli/target/
