@@ -13,6 +13,7 @@
 - [ ] **Verify** `codeql --version` returns 2.x+
 - [ ] **Open** VS Code with repo loaded
 - [ ] **Open** PowerShell 7 terminal (not Windows PS 5.1)
+- [ ] **Set** `$env:PYTHONUTF8 = "1"` in terminal (prevents Semgrep Unicode errors on Windows)
 - [ ] **Open** browser to `github.com/timothywarner-org/globomantics-robot-fleet`
 - [ ] **Confirm** CodeQL alerts exist in Security tab (at least 3)
 - [ ] **Confirm** no existing Semgrep workflow (if doing live creation)
@@ -21,11 +22,7 @@
 
 ---
 
----
-
 ## MODULE 5: Third-Party Scanners, SARIF, Copilot Autofix
-
----
 
 ### 1. Set the Stage (~2 min)
 
@@ -113,6 +110,7 @@ jobs:
 - [ ] **Run** Semgrep locally on Rust directory:
 
 ```powershell
+$env:PYTHONUTF8 = "1"   # Required on Windows to avoid Unicode errors
 semgrep scan --config p/rust --sarif --output rust-scan.sarif ./rust-telemetry-cli
 ```
 
@@ -162,11 +160,7 @@ $sarif.runs | Select-Object @{N='Tool';E={$_.tool.driver.name}}, @{N='Rules';E={
 
 ---
 
----
-
 ## MODULE 6: Analysis Model, Triage, Troubleshooting
-
----
 
 ### 8. Query Suites & Build Modes (~3 min)
 
@@ -355,8 +349,6 @@ codeql github upload-results `
 ### 17. Module 6 Wrap-Up (~30 sec)
 
 - [ ] **SAY THIS:** "Recap: Query suites control what CodeQL looks for. Show paths validates true positives. Copilot Chat explains vulnerabilities in plain English. Dismissals require defensible documentation. Troubleshooting means being more explicit in configuration. Together with Module 5, you have the complete code scanning picture."
-
----
 
 ---
 

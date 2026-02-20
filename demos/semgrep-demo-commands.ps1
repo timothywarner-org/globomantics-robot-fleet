@@ -28,6 +28,9 @@
 $repo    = "timothywarner-org/globomantics-robot-fleet"
 $repoDir = "C:\github\globomantics-robot-fleet"
 
+# Fix Semgrep Unicode encoding issue on Windows (prevents UnicodeEncodeError)
+$env:PYTHONUTF8 = "1"
+
 # ============================================================================
 # HELPER FUNCTIONS
 # ============================================================================

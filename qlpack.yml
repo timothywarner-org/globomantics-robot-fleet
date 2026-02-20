@@ -1,0 +1,7 @@
+---
+name: globomantics/security-queries
+version: 1.0.0
+description: Custom CodeQL security queries for Globomantics Robot Fleet Manager
+library: false
+dependencies:
+  codeql/javascript-all: "*"

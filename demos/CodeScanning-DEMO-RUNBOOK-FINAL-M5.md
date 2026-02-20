@@ -14,6 +14,7 @@
 - [ ] Semgrep CLI installed — `pip install semgrep` (or `pipx install semgrep`)
 - [ ] VS Code open with extensions: GitHub Copilot, CodeQL, GitHub Actions
 - [ ] PowerShell 7 terminal in VS Code (not Windows PowerShell 5.1)
+- [ ] Set `$env:PYTHONUTF8 = "1"` in terminal (prevents Semgrep Unicode errors on Windows)
 - [ ] Repo cloned locally to `C:\repos\globomantics-robot-fleet`
 
 **Expected repo state:**
@@ -166,6 +167,9 @@ jobs:
 # Navigate to repo
 cd C:\repos\globomantics-robot-fleet
 
+# Fix Semgrep Unicode encoding on Windows
+$env:PYTHONUTF8 = "1"
+
 # Run Semgrep against the Rust telemetry CLI specifically
 semgrep scan --config p/rust --sarif --output rust-scan.sarif ./rust-telemetry-cli
 
@@ -310,6 +314,9 @@ $sarif.runs | Select-Object @{N='Tool';E={$_.tool.driver.name}},
 ### PowerShell Commands
 
 ```powershell
+# Fix Semgrep Unicode encoding on Windows (set once per terminal session)
+$env:PYTHONUTF8 = "1"
+
 # Run Semgrep locally (full repo)
 semgrep scan --config p/security-audit --config p/rust --sarif --output results.sarif .
 
