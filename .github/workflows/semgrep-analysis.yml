@@ -1,0 +1,47 @@
+# Third-party scanner: Semgrep (covers Rust, JS, and 30+ languages)
+# Semgrep is pattern-based and outputs SARIF 2.1.0 natively, making it ideal
+# for augmenting CodeQL with coverage for languages it doesn't support (e.g., Rust).
+# GH-500 EXAM TIP: Third-party tools use upload-sarif, NOT codeql-action/analyze
+name: "Semgrep Security Analysis"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 14 * * 1'  # Weekly Monday 9 AM Central
+
+jobs:
+  semgrep:
+    name: Semgrep SAST Scan
+    runs-on: ubuntu-latest
+
+    permissions:
+      # CRITICAL: Required for SARIF upload — miss this and you get a 403
+      security-events: write
+      actions: read
+      contents: read
+
+    container:
+      # Official Semgrep Docker image — matches semgrep.dev docs
+      image: semgrep/semgrep
+
+    # Skip Dependabot PRs to avoid permission issues
+    if: (github.actor != 'dependabot[bot]')
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Semgrep scan
+        run: semgrep scan --config p/security-audit --config p/rust --sarif > semgrep.sarif
+
+      # upload-sarif lives in the codeql-action repo — same repo, different action
+      - name: Upload SARIF results
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: semgrep.sarif
+          # Category prevents overwriting CodeQL results
+          category: semgrep-security-audit
