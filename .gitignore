@@ -21,3 +21,4 @@ rust-telemetry-cli/target/
 
 # CodeQL databases (generated locally, large)
 codeql-db-*/
+image.png
