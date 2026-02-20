@@ -3,6 +3,9 @@ const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const session = require('express-session');
 const path = require('path');
+const fs = require('fs');
+const crypto = require('crypto');
+const { execSync } = require('child_process');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const _ = require('lodash');
@@ -10,6 +13,7 @@ const moment = require('moment');
 const axios = require('axios');
 const helmet = require('helmet');
 const cors = require('cors');
+const serialize = require('serialize-javascript');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -155,6 +159,168 @@ app.get('/api/export/:format', (req, res) => {
     } catch (error) {
         res.status(400).json({ error: 'Invalid format' });
     }
+});
+
+// =====================================================================
+// ADDITIONAL INTENTIONAL VULNERABILITIES (for Semgrep / CodeQL demos)
+// These exist on purpose — do NOT fix unless specifically asked.
+// =====================================================================
+
+// --- Command Injection (CWE-78) ---
+// Semgrep: javascript.lang.security.audit.child-process-injection
+app.get('/api/diagnostics/:robotName', (req, res) => {
+    const robotName = req.params.robotName;
+    try {
+        const result = execSync(`ping -c 1 ${robotName}.globomantics.local`);
+        res.json({ output: result.toString() });
+    } catch (error) {
+        res.status(500).json({ error: 'Diagnostics failed' });
+    }
+});
+
+// --- Path Traversal (CWE-22) ---
+// Semgrep: javascript.lang.security.audit.path-traversal
+app.get('/api/logs/:filename', (req, res) => {
+    const filename = req.params.filename;
+    const logPath = path.join(__dirname, 'logs', filename);
+    res.sendFile(logPath);
+});
+
+// --- SSRF (CWE-918) ---
+// Semgrep: javascript.lang.security.audit.request-ssrf
+app.get('/api/robot-health', async (req, res) => {
+    const endpoint = req.query.url;
+    try {
+        const response = await axios.get(endpoint);
+        res.json(response.data);
+    } catch (error) {
+        res.status(502).json({ error: 'Health check failed' });
+    }
+});
+
+// --- Hardcoded JWT Secret (CWE-798) ---
+// Semgrep: javascript.lang.security.audit.hardcoded-jwt-secret
+const JWT_SECRET = 'super-secret-globomantics-key-2024';
+
+app.post('/api/auth/login', (req, res) => {
+    const { username, password } = req.body;
+    const user = users.find(u => u.username === username);
+    if (user) {
+        const token = jwt.sign(
+            { userId: user.id, role: user.role },
+            JWT_SECRET,
+            { expiresIn: '24h' }
+        );
+        res.json({ token });
+    } else {
+        res.status(401).json({ error: 'Invalid credentials' });
+    }
+});
+
+// --- SQL Injection Pattern (CWE-89) ---
+// Semgrep: javascript.lang.security.audit.sqli
+app.get('/api/search', (req, res) => {
+    const query = req.query.q;
+    // Intentionally unsafe string concatenation for demo
+    const sql = "SELECT * FROM robots WHERE name LIKE '%" + query + "%'";
+    // Mock response (no real DB) — the pattern is what scanners flag
+    res.json({ query: sql, results: robots.filter(r =>
+        r.name.toLowerCase().includes((query || '').toLowerCase())
+    )});
+});
+
+// --- NoSQL Injection Pattern (CWE-943) ---
+// Semgrep: javascript.lang.security.audit.nosql-injection
+app.post('/api/robots/find', (req, res) => {
+    const filter = req.body;
+    // Directly using user input as a query filter — NoSQL injection
+    const results = robots.filter(r => {
+        return Object.keys(filter).every(key => r[key] === filter[key]);
+    });
+    res.json(results);
+});
+
+// --- Regex DoS / ReDoS (CWE-1333) ---
+// Semgrep: javascript.lang.security.audit.detect-regex-dos
+app.post('/api/validate-serial', (req, res) => {
+    const serial = req.body.serial;
+    // Vulnerable regex — catastrophic backtracking
+    const pattern = /^(([a-z])+.)+[A-Z]([a-z])+$/;
+    const isValid = pattern.test(serial);
+    res.json({ serial, valid: isValid });
+});
+
+// --- Insecure Randomness (CWE-330) ---
+// Semgrep: javascript.lang.security.audit.insecure-random
+app.get('/api/token/generate', (req, res) => {
+    // Math.random() is not cryptographically secure
+    const token = Math.random().toString(36).substring(2) +
+                  Math.random().toString(36).substring(2);
+    res.json({ resetToken: token });
+});
+
+// --- XSS via innerHTML Pattern (CWE-79) ---
+// Semgrep: javascript.browser.security.audit.innerHTML
+app.get('/api/robot-label/:id', (req, res) => {
+    const robotId = parseInt(req.params.id);
+    const robot = robots.find(r => r.id === robotId);
+    const name = req.query.customName || (robot ? robot.name : 'Unknown');
+    // Reflected user input in HTML response — XSS
+    res.send(`<html><body><h1>Robot: ${name}</h1><p>Status: ${robot ? robot.status : 'N/A'}</p></body></html>`);
+});
+
+// --- Deserialization / Unsafe Serialize (CWE-502) ---
+app.get('/api/config/export', (req, res) => {
+    const config = {
+        robots: robots,
+        generatedAt: new Date(),
+        version: '2.0.0'
+    };
+    // serialize-javascript with unsafe option
+    const serialized = serialize(config, { unsafe: true });
+    res.type('application/javascript').send(`window.__CONFIG__ = ${serialized}`);
+});
+
+// --- Weak Crypto (CWE-327) ---
+// Semgrep: javascript.lang.security.audit.weak-crypto
+app.post('/api/robot/verify', (req, res) => {
+    const { robotId, checksum } = req.body;
+    // MD5 is cryptographically broken
+    const hash = crypto.createHash('md5').update(String(robotId)).digest('hex');
+    res.json({ match: hash === checksum, hash });
+});
+
+// --- Open Redirect (CWE-601) ---
+// Semgrep: javascript.lang.security.audit.open-redirect
+app.get('/redirect', (req, res) => {
+    const target = req.query.url;
+    res.redirect(target);
+});
+
+// --- Prototype Pollution via Object.assign (CWE-1321) ---
+app.post('/api/robot/:id/settings', (req, res) => {
+    const robotId = parseInt(req.params.id);
+    const robot = robots.find(r => r.id === robotId);
+    if (robot) {
+        // Prototype pollution via Object.assign with user input
+        const settings = Object.assign({}, robot, req.body);
+        res.json(settings);
+    } else {
+        res.status(404).json({ error: 'Robot not found' });
+    }
+});
+
+// --- Hardcoded API Credentials (CWE-798) ---
+const TELEMETRY_API_KEY = 'sk-globo-prod-4f8a2b1c9d3e7f6a5b4c3d2e1f0a9b8c';
+const DATABASE_PASSWORD = 'Gl0bomantics_Pr0d_2024!';
+const AWS_ACCESS_KEY = 'AKIAIOSFODNN7GLOBOMAN';
+
+app.get('/api/telemetry/config', (req, res) => {
+    res.json({
+        endpoint: 'https://telemetry.globomantics.com/v2',
+        apiKey: TELEMETRY_API_KEY,
+        region: 'us-east-1'
+    });
 });
 
 app.listen(PORT, () => {
