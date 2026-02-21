@@ -1,8 +1,8 @@
-# Third-party scanner: Semgrep (covers Rust, JS, and 30+ languages)
-# Semgrep is pattern-based and outputs SARIF 2.1.0 natively, making it ideal
-# for augmenting CodeQL with coverage for languages it doesn't support (e.g., Rust).
-# GH-500 EXAM TIP: Third-party tools use upload-sarif, NOT codeql-action/analyze
-name: "Semgrep Security Analysis"
+# Combined code scanning workflow: CodeQL (GitHub native) + Semgrep (third-party)
+# CodeQL provides JavaScript/TypeScript advanced security scanning via GHAS.
+# Semgrep augments CodeQL with pattern-based scanning for Rust and 30+ languages.
+# GH-500 EXAM TIP: CodeQL uses codeql-action/analyze; third-party tools use upload-sarif
+name: "Code Scanning: CodeQL + Semgrep"
 
 on:
   push:
@@ -10,9 +10,56 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    - cron: '0 14 * * 1'  # Weekly Monday 9 AM Central
+    - cron: "0 14 * * 1" # Weekly Monday 9 AM Central
 
 jobs:
+  # ──────────────────────────────────────────────────────────────────
+  # Job 1: CodeQL — GitHub's native SAST engine for JavaScript
+  # GH-500 EXAM TIP: CodeQL uses the codeql-action trilogy:
+  #   init → autobuild (optional for interpreted langs) → analyze
+  # ──────────────────────────────────────────────────────────────────
+  codeql:
+    name: CodeQL JavaScript Analysis
+    runs-on: ubuntu-latest
+
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+
+    # Skip Dependabot PRs to avoid permission issues
+    if: (github.actor != 'dependabot[bot]')
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ["javascript-typescript"]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          # security-extended includes additional queries beyond the default suite
+          queries: security-extended
+
+      # Autobuild not required for JavaScript (interpreted language),
+      # but CodeQL will auto-detect and trace the source files
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v4
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:${{ matrix.language }}"
+
+  # ──────────────────────────────────────────────────────────────────
+  # Job 2: Semgrep — third-party pattern-based scanner (covers Rust)
+  # GH-500 EXAM TIP: Third-party tools use upload-sarif, NOT analyze
+  # ──────────────────────────────────────────────────────────────────
   semgrep:
     name: Semgrep SAST Scan
     runs-on: ubuntu-latest

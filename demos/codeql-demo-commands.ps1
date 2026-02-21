@@ -10,31 +10,61 @@
 
     Features a numbered menu so the presenter can jump to any section.
 
+    HOW THIS CONSOLE WORKS FOR LEARNERS:
+    ─────────────────────────────────────
+    This script is a "live demo safety net." Each menu option runs real GitHub CLI
+    and Semgrep commands against the repo, with talk tracks and exam tips displayed
+    inline. If a live command fails during a presentation, the companion Jupyter
+    notebooks (codeql-demo.ipynb, semgrep-demo.ipynb) have pre-captured output.
+
+    KEY GHAS CONCEPTS DEMONSTRATED:
+    ─────────────────────────────────
+    1. CodeQL = GitHub's native SAST engine (uses codeql-action/analyze)
+    2. Semgrep = third-party scanner (uses codeql-action/upload-sarif)
+    3. SARIF 2.1.0 = the universal interchange format for security findings
+    4. Categories prevent multiple scanners from overwriting each other's results
+    5. The gh CLI provides full programmatic access to the Security tab
+
 .NOTES
     Repository : timothywarner-org/globomantics-robot-fleet
-    PowerShell : 7.x required
+    PowerShell : 7.x required (PowerShell 5.1 will NOT work — missing features)
     Prerequisites:
       - gh CLI authenticated (gh auth status)
       - Semgrep CLI installed (pip install semgrep)
-      - CodeQL CLI installed (for SARIF upload)
+      - CodeQL CLI installed (for SARIF upload and local analysis)
       - Repo cloned locally
+    Companion files:
+      - demos/codeql-demo.ipynb      — pre-captured CodeQL CLI outputs
+      - demos/semgrep-demo.ipynb      — pre-captured Semgrep scan outputs
+      - demos/DEMO-PUNCHLIST.md       — full demo timing and talk tracks
 #>
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # CONFIGURATION
+# ─────────────────────────────────────────────────────────────────────────────
+# Update $repoDir if your local clone lives in a different path.
+# The $repo variable matches the GitHub owner/repo format used by gh CLI.
 # ═══════════════════════════════════════════════════════════════════════════════
 
 $repo       = "timothywarner-org/globomantics-robot-fleet"
 $repoDir    = "C:\repos\globomantics-robot-fleet"
 $mainBranch = "main"
 
-# Fix Semgrep Unicode encoding issue on Windows (prevents UnicodeEncodeError)
+# IMPORTANT: Semgrep is a Python tool. On Windows, Python defaults to the system
+# locale encoding, which can crash Semgrep when it encounters non-ASCII characters
+# in source files. Setting PYTHONUTF8=1 forces UTF-8 encoding globally.
+# Without this, you'll see: UnicodeEncodeError: 'charmap' codec can't encode...
 $env:PYTHONUTF8 = "1"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # HELPER FUNCTIONS
+# ─────────────────────────────────────────────────────────────────────────────
+# These utility functions handle the console UI: banners, menus, color-coded
+# output, talk track prompts, and exam tips. They keep the demo section
+# functions focused on the actual GHAS commands rather than formatting.
 # ═══════════════════════════════════════════════════════════════════════════════
 
+# Clears screen and displays the demo console header
 function Show-Banner {
     Clear-Host
     Write-Host ""
@@ -47,6 +77,9 @@ function Show-Banner {
     Write-Host ""
 }
 
+# Displays the numbered menu. Sections [1]-[7] align with Module 5 (third-party
+# scanners, SARIF, Autofix). Sections [8]-[15] align with Module 6 (analysis
+# model, triage, troubleshooting). See DEMO-PUNCHLIST.md for timing guidance.
 function Show-Menu {
     Write-Host "  📋 Select a demo section:" -ForegroundColor White
     Write-Host ""
@@ -77,6 +110,7 @@ function Show-Menu {
     Write-Host ""
 }
 
+# Renders a cyan box around a section title — visual separator for the presenter
 function Show-SectionHeader {
     param([string]$Title, [string]$Emoji = "📌")
     Write-Host ""
@@ -86,6 +120,8 @@ function Show-SectionHeader {
     Write-Host ""
 }
 
+# Shows the exact command about to run — helps learners follow along and
+# copy commands for their own practice
 function Show-Command {
     param([string]$Command)
     Write-Host "  ⚡ Running:" -ForegroundColor Yellow -NoNewline
@@ -93,6 +129,8 @@ function Show-Command {
     Write-Host "  ─────────────────────────────────────────────────────────" -ForegroundColor DarkGray
 }
 
+# Displays presenter talk track text — what the instructor should SAY while
+# the command output is on screen. Greyed out so it doesn't distract from output.
 function Show-TalkTrack {
     param([string]$Text)
     Write-Host ""
@@ -103,6 +141,8 @@ function Show-TalkTrack {
     Write-Host ""
 }
 
+# Renders exam tips in a magenta box — these are the specific facts learners
+# should memorize for the GH-500 certification exam
 function Show-ExamTip {
     param([string]$Text)
     Write-Host ""
@@ -116,6 +156,7 @@ function Show-ExamTip {
     Write-Host ""
 }
 
+# Color-coded result display helpers
 function Show-Result {
     param([string]$Label, [string]$Value, [string]$Color = "White")
     Write-Host "     $Label" -ForegroundColor DarkGray -NoNewline
@@ -137,6 +178,7 @@ function Show-Warning {
     Write-Host "  ⚠️  $Message" -ForegroundColor Yellow
 }
 
+# Pauses execution so the presenter can discuss what just happened on screen
 function Pause-Demo {
     param([string]$Message = "Press Enter to return to the menu...")
     Write-Host ""
@@ -144,6 +186,8 @@ function Pause-Demo {
     Read-Host
 }
 
+# Safety gate for destructive actions (dismissing alerts, running full scans).
+# Returns $true only if the presenter explicitly types 'y'.
 function Confirm-Action {
     param([string]$Message)
     Write-Host ""
@@ -154,14 +198,36 @@ function Confirm-Action {
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # SECTION FUNCTIONS
+# ─────────────────────────────────────────────────────────────────────────────
+# Each function below corresponds to one menu option. They follow a consistent
+# pattern: header → talk track → live commands → exam tips → pause.
+#
+# LEARNER NOTE: The gh CLI commands here use the REST API via `gh api`. This is
+# the same API that GitHub Actions workflows and third-party integrations use.
+# Mastering `gh api` gives you full control over code scanning programmatically.
 # ═══════════════════════════════════════════════════════════════════════════════
 
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTION 1: Pre-flight Checks
+# ─────────────────────────────────────────────────────────────────────────────
+# Validates that all required CLI tools are installed and authenticated before
+# the demo begins. Nothing worse than discovering a missing tool mid-presentation.
+#
+# Tools verified:
+#   - gh CLI    → GitHub API access (alerts, workflows, SARIF upload)
+#   - semgrep   → third-party SAST scanner (pattern-based, supports 30+ langs)
+#   - codeql    → GitHub's native SAST engine CLI (database creation, analysis)
+#
+# Also checks the CodeQL "default setup" configuration via the API, which is
+# the zero-config enablement option that scans interpreted languages automatically.
+# ─────────────────────────────────────────────────────────────────────────────
 function Invoke-PreflightChecks {
     Show-SectionHeader "Pre-flight Checks" "🔧"
 
     Show-TalkTrack "Before we begin, let's verify all our tools are ready."
 
-    # GitHub CLI
+    # GitHub CLI — required for ALL API interactions in this demo.
+    # `gh auth status` confirms the token is valid and shows which account/org.
     Write-Host "  🔍 Checking GitHub CLI..." -ForegroundColor White
     Show-Command "gh auth status"
     try {
@@ -172,7 +238,10 @@ function Invoke-PreflightChecks {
     }
     Write-Host ""
 
-    # Semgrep CLI
+    # Semgrep CLI — the third-party scanner. Installed via pip (it's a Python tool).
+    # Semgrep is pattern-based: it matches code patterns using rules from the
+    # Semgrep registry (p/security-audit, p/rust, etc.) rather than building a
+    # full semantic model like CodeQL does.
     Write-Host "  🔍 Checking Semgrep CLI..." -ForegroundColor White
     Show-Command "semgrep --version"
     try {
@@ -183,7 +252,11 @@ function Invoke-PreflightChecks {
     }
     Write-Host ""
 
-    # CodeQL CLI
+    # CodeQL CLI — GitHub's native SAST engine. Used here for:
+    #   1. Creating local databases (codeql database create)
+    #   2. Running queries locally (codeql database analyze)
+    #   3. Uploading SARIF results (codeql github upload-results)
+    # Note: CodeQL in GitHub Actions uses the codeql-action, not the CLI directly.
     Write-Host "  🔍 Checking CodeQL CLI..." -ForegroundColor White
     Show-Command "codeql version"
     try {
@@ -194,7 +267,7 @@ function Invoke-PreflightChecks {
     }
     Write-Host ""
 
-    # Repo directory
+    # Verify the repo directory exists locally
     Write-Host "  🔍 Checking repository directory..." -ForegroundColor White
     if (Test-Path $repoDir) {
         Show-Success "Repo directory exists: $repoDir"
@@ -203,7 +276,13 @@ function Invoke-PreflightChecks {
     }
     Write-Host ""
 
-    # Check CodeQL default setup configuration
+    # Check CodeQL default setup configuration via the REST API.
+    # "Default setup" is GitHub's zero-config option that automatically enables
+    # CodeQL for interpreted languages (JavaScript, Python, Ruby, etc.).
+    #
+    # GH-500 DISTINCTION: "default setup" (enablement method) is NOT the same as
+    # "default suite" (the query set). The default SUITE is the minimal query pack.
+    # The default SETUP can use any suite (default, security-extended, etc.).
     Write-Host "`n🔧 CodeQL Repository Configuration:" -ForegroundColor Cyan
     $setupJson = gh api repos/timothywarner-org/globomantics-robot-fleet/code-scanning/default-setup 2>&1
     if ($LASTEXITCODE -eq 0) {
@@ -213,7 +292,6 @@ function Invoke-PreflightChecks {
         Write-Host "   🔍 Query Suite: $($setup.query_suite)" -ForegroundColor White
         Write-Host "   📅 Updated:    $($setup.updated_at)" -ForegroundColor DarkGray
 
-        # Highlight the setup type
         if ($setup.state -eq 'configured') {
             Write-Host "   💡 Using DEFAULT SETUP (zero-config)" -ForegroundColor Magenta
             Write-Host "      GH-500 TIP: 'default setup' ≠ 'default suite'" -ForegroundColor Magenta
@@ -224,7 +302,7 @@ function Invoke-PreflightChecks {
         gh run list --repo timothywarner-org/globomantics-robot-fleet --workflow=codeql.yml --limit=3
     }
 
-    # Configuration summary
+    # Configuration summary — confirms what values the script will use
     Write-Host ""
     Write-Host "  ╭─────────────────────────────────────────────────────────╮" -ForegroundColor Cyan
     Write-Host "  │ 🔧 Configuration                                        │" -ForegroundColor Cyan
@@ -236,6 +314,18 @@ function Invoke-PreflightChecks {
     Pause-Demo
 }
 
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTION 2: Semgrep Workflow Reference
+# ─────────────────────────────────────────────────────────────────────────────
+# Displays the key configuration points of the Semgrep GitHub Actions workflow.
+# This is a REFERENCE section — the actual workflow is created live in the
+# GitHub UI during the demo (see DEMO-PUNCHLIST.md, Module 5, step 2).
+#
+# THREE CRITICAL POINTS for the GH-500 exam:
+#   1. `security-events: write` permission — required for SARIF upload (403 without it)
+#   2. `upload-sarif` action — lives in the codeql-action repo but is NOT CodeQL
+#   3. `category` field — prevents Semgrep results from overwriting CodeQL results
+# ─────────────────────────────────────────────────────────────────────────────
 function Invoke-SemgrepWorkflowRef {
     Show-SectionHeader "Semgrep Workflow Reference" "📊"
 
@@ -262,6 +352,23 @@ The workflow file .github/workflows/semgrep-analysis.yml is committed to main.
     Pause-Demo
 }
 
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTION 3: Run Semgrep Locally (Rust CLI)
+# ─────────────────────────────────────────────────────────────────────────────
+# Demonstrates running Semgrep outside of GitHub Actions — critical for orgs
+# using Jenkins, Azure DevOps, GitLab CI, or other non-GitHub CI systems.
+#
+# WHY RUST? CodeQL does NOT support Rust. This is the key selling point for
+# third-party scanners: they fill language coverage gaps. Semgrep supports
+# 30+ languages including Rust, Go, Ruby, and many others.
+#
+# The --sarif flag tells Semgrep to output in SARIF 2.1.0 format, which is
+# the ONLY format GitHub's Security tab accepts. The --output flag writes to
+# a file instead of stdout (cleaner for subsequent upload).
+#
+# Rule packs used:
+#   p/rust — Rust-specific security rules from the Semgrep registry
+# ─────────────────────────────────────────────────────────────────────────────
 function Invoke-SemgrepLocalScan {
     Show-SectionHeader "Run Semgrep Locally (Rust CLI)" "🔍"
 
@@ -276,6 +383,10 @@ SARIF and land results in the same Security tab.
 
     Push-Location $repoDir
 
+    # Run Semgrep against ONLY the Rust telemetry CLI subdirectory.
+    # --config p/rust   → pull Rust security rules from the Semgrep registry
+    # --sarif           → output in SARIF 2.1.0 format (required for GitHub)
+    # --output          → write to file instead of stdout
     Show-Command "semgrep scan --config p/rust --sarif --output rust-scan.sarif ./rust-telemetry-cli"
     Write-Host ""
     semgrep scan `
@@ -284,6 +395,7 @@ SARIF and land results in the same Security tab.
         --output rust-scan.sarif `
         ./rust-telemetry-cli
 
+    # Verify the SARIF file was created and show basic file info
     Write-Host ""
     if (Test-Path rust-scan.sarif) {
         Show-Success "SARIF file created"
@@ -307,6 +419,23 @@ SARIF 2.1.0 is the only supported version.
     Pause-Demo
 }
 
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTION 4: Upload SARIF via CodeQL CLI
+# ─────────────────────────────────────────────────────────────────────────────
+# Uploads the locally-generated SARIF file to GitHub's Security tab using the
+# CodeQL CLI's `github upload-results` command.
+#
+# KEY CONCEPT: There are THREE ways to get SARIF into GitHub:
+#   1. codeql-action/upload-sarif  — in a GitHub Actions workflow
+#   2. codeql github upload-results — via the CodeQL CLI (shown here)
+#   3. REST API POST to /sarifs     — via gh api or curl
+#
+# The --sarif-category flag is CRITICAL when multiple scanners upload results.
+# Without it, each upload overwrites the previous one. The category creates a
+# separate "slot" in the Security tab for each scanner/run combination.
+#
+# GH-500 EXAM: Know all three upload methods and when to use each.
+# ─────────────────────────────────────────────────────────────────────────────
 function Invoke-UploadSarif {
     Show-SectionHeader "Upload SARIF via CodeQL CLI" "🚀"
 
@@ -318,6 +447,8 @@ two categories, zero overwrites. You can also use the REST API with gh api.
 
     Push-Location $repoDir
 
+    # Get the current commit SHA — the upload must reference the exact commit
+    # so GitHub can map findings to the correct source code version
     $commitSha = git rev-parse HEAD
 
     Write-Host "  🎯 Upload target:" -ForegroundColor White
@@ -327,6 +458,12 @@ two categories, zero overwrites. You can also use the REST API with gh api.
     Show-Result "Category   :" "semgrep-rust-local"
     Write-Host ""
 
+    # Upload SARIF to GitHub. Each parameter explained:
+    #   --repository       → owner/repo target
+    #   --ref              → git ref (branch) the results apply to
+    #   --commit           → exact commit SHA for code mapping
+    #   --sarif            → path to the SARIF file
+    #   --sarif-category   → UNIQUE label to prevent overwriting other results
     Show-Command "codeql github upload-results --repository=$repo --ref=refs/heads/$mainBranch --commit=$commitSha --sarif=rust-scan.sarif --sarif-category=semgrep-rust-local"
     Write-Host ""
 
@@ -355,6 +492,34 @@ SARIF categories prevent result overwrites. Always set
     Pause-Demo
 }
 
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTION 5: Examine SARIF Structure
+# ─────────────────────────────────────────────────────────────────────────────
+# Parses the SARIF JSON to show learners what's inside. Understanding SARIF
+# structure is essential for troubleshooting "no results" or "wrong results."
+#
+# SARIF 2.1.0 STRUCTURE (simplified):
+#   {
+#     "$schema": "https://raw.githubusercontent.com/.../sarif-schema-2.1.0.json",
+#     "version": "2.1.0",
+#     "runs": [
+#       {
+#         "tool": { "driver": { "name": "Semgrep", "rules": [...] } },
+#         "results": [
+#           {
+#             "ruleId": "rust.lang.security...",
+#             "message": { "text": "..." },
+#             "locations": [...],
+#             "partialFingerprints": { ... }  ← how GitHub tracks alerts
+#           }
+#         ]
+#       }
+#     ]
+#   }
+#
+# GH-500 EXAM: partialFingerprints allow GitHub to track the SAME finding
+# across commits, even if files are renamed or code is refactored.
+# ─────────────────────────────────────────────────────────────────────────────
 function Invoke-ExamineSarif {
     Show-SectionHeader "Examine SARIF Structure" "📊"
 
@@ -372,6 +537,9 @@ Even if you rename files or refactor, GitHub knows it is the same finding.
         Show-Command "ConvertFrom-Json rust-scan.sarif | Select runs"
         Write-Host ""
 
+        # Parse SARIF JSON and extract the summary: tool name, rule count, result count.
+        # Each "run" represents one scanner execution. A SARIF file can contain
+        # multiple runs (e.g., if you ran Semgrep with multiple rule packs).
         $sarif = Get-Content $sarifPath | ConvertFrom-Json
 
         Write-Host "  📊 SARIF summary:" -ForegroundColor White
@@ -397,6 +565,24 @@ Even if you rename files or refactor, GitHub knows it is the same finding.
     Pause-Demo
 }
 
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTION 6: List & Filter Code Scanning Alerts
+# ─────────────────────────────────────────────────────────────────────────────
+# Uses the gh CLI to query code scanning alerts via the REST API. This is the
+# same API that automation tools, SIEM integrations, and compliance dashboards
+# call to pull security data from GitHub.
+#
+# The --jq flag uses jq syntax to filter/transform JSON responses. Key fields:
+#   .rule.id       → the rule that triggered (e.g., "js/code-injection")
+#   .tool.name     → which scanner found it ("CodeQL" or "Semgrep")
+#   .rule.severity → "error" (high), "warning" (medium), "note" (low)
+#   .state         → "open" or "dismissed"
+#
+# This section shows three progressively filtered views:
+#   1. All alert rule IDs (quick overview)
+#   2. Alerts with details (number, rule, tool, severity)
+#   3. Filtered by tool (Semgrep-only, then CodeQL-only)
+# ─────────────────────────────────────────────────────────────────────────────
 function Invoke-ListFilterAlerts {
     Show-SectionHeader "List & Filter Code Scanning Alerts" "📋"
 
@@ -405,7 +591,7 @@ The gh CLI gives you programmatic access to everything in the
 Security tab. Let us list all alerts and then filter by scanner tool.
 "@
 
-    # All alert rule IDs
+    # View 1: Just the rule IDs — quick overview of what was found
     Write-Host "  📋 All alert rule IDs:" -ForegroundColor White
     Show-Command "gh api repos/$repo/code-scanning/alerts --jq '.[].rule.id'"
     Write-Host ""
@@ -414,7 +600,7 @@ Security tab. Let us list all alerts and then filter by scanner tool.
 
     Write-Host ""
 
-    # Alerts with details
+    # View 2: Alerts with details — number + rule + tool + severity
     Write-Host "  📊 Alerts with details (number, rule, tool, severity):" -ForegroundColor White
     Show-Command "gh api repos/$repo/code-scanning/alerts --jq '.[] | {number, rule, tool, severity}'"
     Write-Host ""
@@ -423,7 +609,8 @@ Security tab. Let us list all alerts and then filter by scanner tool.
 
     Write-Host ""
 
-    # Semgrep-only alerts
+    # View 3a: Filter to Semgrep-only alerts using jq's select() function.
+    # This shows what the THIRD-PARTY scanner found (Rust + JS patterns).
     Write-Host "  🔍 Semgrep alerts only:" -ForegroundColor White
     Show-Command "gh api ... --jq '.[] | select(.tool.name == \"Semgrep\") | {number, rule}'"
     Write-Host ""
@@ -432,7 +619,8 @@ Security tab. Let us list all alerts and then filter by scanner tool.
 
     Write-Host ""
 
-    # CodeQL-only alerts
+    # View 3b: Filter to CodeQL-only alerts.
+    # This shows what GitHub's NATIVE scanner found (deeper semantic analysis).
     Write-Host "  🔍 CodeQL alerts only:" -ForegroundColor White
     Show-Command "gh api ... --jq '.[] | select(.tool.name == \"CodeQL\") | {number, rule}'"
     Write-Host ""
@@ -442,6 +630,20 @@ Security tab. Let us list all alerts and then filter by scanner tool.
     Pause-Demo
 }
 
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTION 7: Copilot Autofix (UI Reference)
+# ─────────────────────────────────────────────────────────────────────────────
+# Copilot Autofix is a browser-only feature — no CLI equivalent. This section
+# provides the step-by-step walkthrough for the presenter to follow in the UI.
+#
+# KEY LICENSING DISTINCTION (GH-500 exam favorite):
+#   - Copilot AUTOFIX → included with GHAS, no extra subscription
+#   - Copilot CHAT    → requires Copilot Enterprise license (separate cost)
+#
+# Autofix ONLY works on CodeQL alerts. Third-party scanner results (like
+# Semgrep) do NOT get Autofix suggestions. This is because Autofix needs
+# CodeQL's semantic code understanding to generate safe patches.
+# ─────────────────────────────────────────────────────────────────────────────
 function Invoke-CopilotAutofixRef {
     Show-SectionHeader "Copilot Autofix (UI Reference)" "🎯"
 
@@ -466,6 +668,31 @@ The draft PR ensures humans make the final judgment call.
     Pause-Demo
 }
 
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTION 8: Query Suites, Show Paths, Copilot Chat
+# ─────────────────────────────────────────────────────────────────────────────
+# This section transitions from Module 5 to Module 6. It covers three
+# interconnected concepts that control HOW CodeQL analyzes code and HOW
+# you investigate the findings.
+#
+# QUERY SUITES — control what CodeQL looks for:
+#   default              → fewer queries, lower false positive rate
+#   security-extended    → broader coverage, more experimental rules
+#   security-and-quality → adds code quality checks on top of security
+#
+# BUILD MODES — control how CodeQL extracts code:
+#   none      → interpreted languages (JS, Python, Ruby, Java*)
+#   autobuild → GitHub guesses your build system
+#   manual    → you provide explicit build commands (needed for C/C++)
+#   * Java supports 'none' mode — a common GH-500 exam question
+#
+# SHOW PATHS — traces data flow from source (user input) to sink (dangerous
+# function). An unbroken path = confirmed true positive. This is the single
+# most important feature for validating whether an alert is real.
+#
+# COPILOT CHAT — AI-powered plain-English explanations of vulnerabilities.
+# Requires Copilot Enterprise license (separate from GHAS).
+# ─────────────────────────────────────────────────────────────────────────────
 function Invoke-QuerySuitesRef {
     Show-SectionHeader "Query Suites, Show Paths, Copilot Chat" "🔧"
 
@@ -528,6 +755,13 @@ Autofix ships with GHAS alone; Chat is the add-on.
     Pause-Demo
 }
 
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTION 9: List All Code Scanning Alerts
+# ─────────────────────────────────────────────────────────────────────────────
+# Simple listing of all alerts with key metadata. This is the starting point
+# for triage — you need to see the full landscape before deciding what to
+# dismiss, fix, or escalate.
+# ─────────────────────────────────────────────────────────────────────────────
 function Invoke-ListAllAlerts {
     Show-SectionHeader "List All Code Scanning Alerts" "📊"
 
@@ -545,6 +779,22 @@ List every alert with its number, rule, tool, and severity.
     Pause-Demo
 }
 
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTION 10: Filter Alerts by Severity
+# ─────────────────────────────────────────────────────────────────────────────
+# Demonstrates severity-based triage using jq's select() function.
+#
+# SEVERITY MAPPING (GH-500 exam):
+#   "error"   → high/critical findings  → fix immediately
+#   "warning" → medium findings          → fix in next sprint
+#   "note"    → low/informational        → address when convenient
+#
+# In real triage workflows, security teams typically:
+#   1. Filter to "error" severity first
+#   2. Validate each with Show Paths (true positive check)
+#   3. Assign to developers for remediation
+#   4. Dismiss false positives with documented reasoning
+# ─────────────────────────────────────────────────────────────────────────────
 function Invoke-FilterBySeverity {
     Show-SectionHeader "Filter Alerts by Severity" "🔍"
 
@@ -553,6 +803,7 @@ Severity 'error' maps to high/critical findings. This is what the
 security team should prioritize. Warnings and notes can wait.
 "@
 
+    # High/critical alerts — the "fix now" category
     Write-Host "  🔴 High/Critical alerts (severity = error):" -ForegroundColor White
     Show-Command "gh api ... --jq '.[] | select(.rule.severity == \"error\") | {number, rule}'"
     Write-Host ""
@@ -561,6 +812,7 @@ security team should prioritize. Warnings and notes can wait.
 
     Write-Host ""
 
+    # Warning-level alerts — the "fix soon" category
     Write-Host "  🟡 Warning-level alerts:" -ForegroundColor White
     Show-Command "gh api ... --jq '.[] | select(.rule.severity == \"warning\") | {number, rule}'"
     Write-Host ""
@@ -575,6 +827,24 @@ Severity 'error' maps to high/critical. 'warning' is medium.
     Pause-Demo
 }
 
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTION 11: Dismiss an Alert
+# ─────────────────────────────────────────────────────────────────────────────
+# Demonstrates alert dismissal via the REST API. This is a core triage action
+# that creates an AUDIT TRAIL — critical for compliance (SOC 2, ISO 27001).
+#
+# THREE DISMISSAL REASONS (GH-500 exam):
+#   1. "false positive"  → the scanner is wrong, this isn't a real vulnerability
+#   2. "won't fix"       → real issue but accepted risk (business decision)
+#   3. "used in tests"   → vulnerable code is intentional (test/demo context)
+#
+# The dismissed_comment field provides free-text documentation. In regulated
+# environments, this comment should be defensible in an audit.
+#
+# IMPORTANT: This section includes a confirmation prompt because dismissing
+# alerts is a state-changing operation. The presenter picks an alert number
+# interactively to keep the demo flexible.
+# ─────────────────────────────────────────────────────────────────────────────
 function Invoke-DismissAlert {
     Show-SectionHeader "Dismiss an Alert via API" "⚡"
 
@@ -589,7 +859,7 @@ Dismissals require documentation. All three reasons create
 audit trails. This is important for compliance.
 "@
 
-    # Show open alerts
+    # First, show what's available to dismiss
     Write-Host "  📋 Current open alerts:" -ForegroundColor White
     Show-Command "gh api repos/$repo/code-scanning/alerts --jq '.[] | select(.state == \"open\")'"
     Write-Host ""
@@ -601,6 +871,10 @@ audit trails. This is important for compliance.
 
     if ($alertNumber -and $alertNumber -match '^\d+$') {
         if (Confirm-Action "Dismiss alert #$alertNumber with reason 'used in tests'?") {
+            # PATCH request to change alert state. The API fields:
+            #   state              → "dismissed" (or "open" to reopen)
+            #   dismissed_reason   → one of the three allowed values
+            #   dismissed_comment  → free-text audit documentation
             Show-Command "gh api repos/$repo/code-scanning/alerts/$alertNumber --method PATCH --field state=dismissed"
             Write-Host ""
 
@@ -616,7 +890,7 @@ audit trails. This is important for compliance.
                 Show-Failure "Failed to dismiss alert #$alertNumber"
             }
 
-            # Verify
+            # Verify the dismissal by fetching the alert's current state
             Write-Host ""
             Write-Host "  🔍 Verification:" -ForegroundColor White
             gh api "repos/$repo/code-scanning/alerts/$alertNumber" `
@@ -631,6 +905,18 @@ audit trails. This is important for compliance.
     Pause-Demo
 }
 
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTION 12: Re-open a Dismissed Alert
+# ─────────────────────────────────────────────────────────────────────────────
+# Demonstrates that dismissals are NOT permanent. Alerts can be reopened when:
+#   - A false positive turns out to be a true positive after further analysis
+#   - A "won't fix" decision is reversed due to new threat intelligence
+#   - Demo/test code is promoted to production (changes context)
+#
+# This uses the same PATCH endpoint but sets state back to "open".
+# The previous dismissal metadata (reason, comment, who dismissed it, when)
+# remains in the alert's history for audit purposes.
+# ─────────────────────────────────────────────────────────────────────────────
 function Invoke-ReopenAlert {
     Show-SectionHeader "Re-open a Dismissed Alert" "⚡"
 
@@ -639,7 +925,7 @@ Dismissals are not permanent. If circumstances change — say a demo
 repo becomes production code — you can re-open alerts.
 "@
 
-    # Show dismissed alerts
+    # List dismissed alerts so the presenter can pick one to reopen
     Write-Host "  📋 Dismissed alerts:" -ForegroundColor White
     Show-Command "gh api repos/$repo/code-scanning/alerts?state=dismissed"
     Write-Host ""
@@ -651,6 +937,7 @@ repo becomes production code — you can re-open alerts.
 
     if ($reopenNumber -and $reopenNumber -match '^\d+$') {
         if (Confirm-Action "Re-open alert #${reopenNumber}?") {
+            # Setting state back to "open" — no reason or comment needed for reopening
             Show-Command "gh api repos/$repo/code-scanning/alerts/$reopenNumber --method PATCH --field state=open"
             Write-Host ""
 
@@ -664,7 +951,7 @@ repo becomes production code — you can re-open alerts.
                 Show-Failure "Failed to re-open alert #$reopenNumber"
             }
 
-            # Verify
+            # Verify it's back to open state
             Write-Host ""
             Write-Host "  🔍 Verification:" -ForegroundColor White
             gh api "repos/$repo/code-scanning/alerts/$reopenNumber" `
@@ -679,6 +966,15 @@ repo becomes production code — you can re-open alerts.
     Pause-Demo
 }
 
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTION 13: Check Workflow Run Status
+# ─────────────────────────────────────────────────────────────────────────────
+# First step in troubleshooting: is the workflow passing, failing, or stuck?
+# `gh run list` shows recent workflow runs with their status and conclusion.
+#
+# We check both the CodeQL workflow (codeql.yml) and the Semgrep workflow
+# (semgrep-analysis.yml) separately since they run as independent jobs.
+# ─────────────────────────────────────────────────────────────────────────────
 function Invoke-WorkflowStatus {
     Show-SectionHeader "Check Workflow Run Status" "🚀"
 
@@ -708,6 +1004,23 @@ failing, or stuck? The gh CLI gives you a quick summary.
     Pause-Demo
 }
 
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTION 14: View Workflow Logs
+# ─────────────────────────────────────────────────────────────────────────────
+# Deep-dive into workflow logs for a specific run. This is where you find the
+# root cause of failures: permission errors (403), build failures, extraction
+# issues, timeout problems, etc.
+#
+# The presenter picks a run ID from the list (section 13) and views the first
+# 100 lines of logs. In practice, you'd search for "error" or "failed" in the
+# full log output.
+#
+# TIP FOR LEARNERS: The most common CodeQL failures and their log signatures:
+#   - "403 Forbidden"          → missing security-events: write permission
+#   - "No source code found"   → wrong working directory or language mismatch
+#   - "Build failed"           → need build-mode: manual with explicit commands
+#   - "Timed out"              → increase timeout-minutes or split into matrix
+# ─────────────────────────────────────────────────────────────────────────────
 function Invoke-WorkflowLogs {
     Show-SectionHeader "View Workflow Logs" "📋"
 
@@ -727,6 +1040,7 @@ the first thing you do is read the logs.
     $runId = Read-Host "  🎯 Enter a run ID to view logs (or press Enter to skip)"
 
     if ($runId -and $runId -match '^\d+$') {
+        # Truncate to first 100 lines — full logs can be thousands of lines
         Show-Command "gh run view $runId --repo $repo --log | Select-Object -First 100"
         Write-Host ""
         gh run view $runId --repo $repo --log 2>&1 | Select-Object -First 100 | ForEach-Object { Write-Host "     $_" -ForegroundColor White }
@@ -739,6 +1053,17 @@ the first thing you do is read the logs.
     Pause-Demo
 }
 
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTION 15: Common Failure Scenarios Reference
+# ─────────────────────────────────────────────────────────────────────────────
+# Quick-reference troubleshooting table. These are the five most common CodeQL
+# and SARIF upload failures that learners will encounter in practice.
+#
+# THE 90% RULE: Most CodeQL failures come from not being explicit enough in
+# configuration. The default auto-detection works for simple projects, but
+# enterprise codebases with custom build systems, monorepos, or unusual
+# directory structures need explicit configuration.
+# ─────────────────────────────────────────────────────────────────────────────
 function Invoke-FailureScenariosRef {
     Show-SectionHeader "Common Failure Scenarios Reference" "⚠️"
 
@@ -764,6 +1089,20 @@ being explicit enough in configuration.
     Pause-Demo
 }
 
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTION 16: Full Semgrep Scan (entire repo)
+# ─────────────────────────────────────────────────────────────────────────────
+# Runs Semgrep against the ENTIRE repository (not just the Rust directory).
+# Uses both the security-audit and Rust rule packs for comprehensive coverage.
+#
+# This is a "bonus" section — useful if the presenter has extra time or if
+# learners want to see the full finding landscape. The scan can take 1-3
+# minutes depending on repo size and network speed (rules are downloaded
+# from the Semgrep registry on each run).
+#
+# The results are saved to results.sarif (separate from rust-scan.sarif)
+# and could be uploaded with a different --sarif-category if desired.
+# ─────────────────────────────────────────────────────────────────────────────
 function Invoke-FullSemgrepScan {
     Show-SectionHeader "Full Semgrep Scan (entire repo)" "🔍"
 
@@ -773,6 +1112,9 @@ function Invoke-FullSemgrepScan {
     if (Confirm-Action "Run full Semgrep scan on the entire repository?") {
         Push-Location $repoDir
 
+        # Two rule packs combined:
+        #   p/security-audit → broad security rules for JS, Python, and more
+        #   p/rust           → Rust-specific security rules
         Show-Command "semgrep scan --config p/security-audit --config p/rust --sarif --output results.sarif ."
         Write-Host ""
 
@@ -795,6 +1137,7 @@ function Invoke-FullSemgrepScan {
 
             Write-Host ""
 
+            # Parse and display the same summary table as section 5
             $sarif = Get-Content results.sarif | ConvertFrom-Json
             Write-Host "  📊 Results summary:" -ForegroundColor White
             Write-Host ""
@@ -822,6 +1165,17 @@ function Invoke-FullSemgrepScan {
     Pause-Demo
 }
 
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTION 17: Run All Sections Sequentially
+# ─────────────────────────────────────────────────────────────────────────────
+# Runs every section in order with pauses between each. Useful for:
+#   - Full dry-run before a live presentation
+#   - Recording a complete walkthrough video
+#   - Self-paced learner practice (run everything, then review)
+#
+# Ends with a recap of both modules' key takeaways — the same points that
+# appear in the DEMO-PUNCHLIST.md wrap-up sections.
+# ─────────────────────────────────────────────────────────────────────────────
 function Invoke-RunAll {
     Show-SectionHeader "Run All Sections Sequentially" "🚀"
 
@@ -846,7 +1200,7 @@ function Invoke-RunAll {
         Invoke-FailureScenariosRef
         Invoke-FullSemgrepScan
 
-        # Wrap-up
+        # Final recap — summarizes both modules for learner retention
         Show-SectionHeader "Demo Complete" "✅"
 
         Write-Host "  📊 Module 5 Recap:" -ForegroundColor Green
@@ -872,6 +1226,13 @@ function Invoke-RunAll {
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # MAIN LOOP
+# ─────────────────────────────────────────────────────────────────────────────
+# Simple menu-driven loop. The presenter selects a number, the corresponding
+# function runs, and control returns to the menu. Enter 0 to exit.
+#
+# TIP FOR LEARNERS: You can run this script yourself to practice! Just update
+# the $repoDir variable at the top to point to your local clone, and make sure
+# gh, semgrep, and codeql CLIs are installed and authenticated.
 # ═══════════════════════════════════════════════════════════════════════════════
 
 $running = $true
