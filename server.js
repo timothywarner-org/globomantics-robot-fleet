@@ -149,14 +149,13 @@ app.get('/api/robots', (req, res) => {
     res.json(robots);
 });
 
-// Intentionally vulnerable endpoint for demo
+// Export endpoint
 app.get('/api/export/:format', (req, res) => {
     const format = req.params.format;
 
-    // Intentionally unsafe eval for demo purposes
     try {
-        const exportFunction = eval(`(function() { return "Exporting data as ${format}"; })`);
-        res.json({ message: exportFunction() });
+        const message = `Exporting data as ${format}`;
+        res.json({ message });
     } catch (error) {
         res.status(400).json({ error: 'Invalid format' });
     }
