@@ -11,6 +11,7 @@ const jwt = require('jsonwebtoken');
 const _ = require('lodash');
 const moment = require('moment');
 const axios = require('axios');
+const axios = require('axios');
 const helmet = require('helmet');
 const cors = require('cors');
 const serialize = require('serialize-javascript');
@@ -188,8 +189,23 @@ app.get('/api/logs/:filename', (req, res) => {
 
 // --- SSRF (CWE-918) ---
 // Semgrep: javascript.lang.security.audit.request-ssrf
+
+// Allow-list of robot health check endpoints. The query parameter selects a key here,
+// rather than allowing arbitrary URLs to be requested.
+const ALLOWED_HEALTH_ENDPOINTS = {
+    // Example entries; adjust to match actual robot identifiers and URLs.
+    robot1: 'http://robot1.internal/health',
+    robot2: 'http://robot2.internal/health'
+};
+
 app.get('/api/robot-health', async (req, res) => {
-    const endpoint = req.query.url;
+    const targetKey = req.query.url;
+    const endpoint = ALLOWED_HEALTH_ENDPOINTS[targetKey];
+
+    if (!endpoint) {
+        return res.status(400).json({ error: 'Invalid robot health endpoint' });
+    }
+
     try {
         const response = await axios.get(endpoint);
         res.json(response.data);
