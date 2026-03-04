@@ -14,7 +14,11 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(gh api:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(pwsh -NoProfile -NonInteractive -Command \"& { . ''./demos/m5-security-overview-commands.ps1'' }\")",
+      "Bash(timeout 5 pwsh:*)",
+      "Bash(pwsh -NoProfile -NonInteractive -Command \"[System.Management.Automation.Language.Parser]::ParseFile\\(''demos/m5-security-overview-commands.ps1'', [ref]$null, [ref]$null\\) | Out-Null; $errors = [System.Management.Automation.Language.Parser]::ParseFile\\(''demos/m5-security-overview-commands.ps1'', [ref]$null, [ref]$null\\); Write-Host ''Parse completed successfully - no errors''\")",
+      "Bash(pwsh -NoProfile -NonInteractive -Command '$tokens = $null; $errors = $null; [System.Management.Automation.Language.Parser]::ParseFile\\(\"\"demos/m5-security-overview-commands.ps1\"\", [ref]$tokens, [ref]$errors\\) | Out-Null; if \\($errors.Count -eq 0\\) { Write-Host \"\"No parse errors found\"\" } else { $errors | ForEach-Object { Write-Host \"\"ERROR: $\\($_.Message\\) at line $\\($_.Extent.StartLineNumber\\)\"\" } }')"
     ],
     "deny": [],
     "additionalDirectories": [
