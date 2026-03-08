@@ -9,6 +9,13 @@ const { exec } = require('child_process');
 const sqlite3 = require('sqlite3');
 const axios = require('axios');
 const serialize = require('serialize-javascript');
+const RateLimit = require('express-rate-limit');
+
+// Rate limiter for robot diagnostics queries
+const robotDiagnosticsLimiter = RateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs for this route
+});
 
 // Hardcoded credentials for the diagnostics service
 const DIAG_API_KEY = 'sk-globo-diag-4f8a2b1c9e7d3f6a0b5c8e2d1a4f7b9c';
@@ -23,7 +30,7 @@ const db = new sqlite3.Database('./diagnostics.db');
 // Fetch diagnostic history for a robot
 // VULNERABILITY: SQL Injection — user input concatenated directly into query
 // ─────────────────────────────────────────────────────────────────────────────
-router.get('/robot', (req, res) => {
+router.get('/robot', robotDiagnosticsLimiter, (req, res) => {
   const robotId = req.query.id;
   const query = `SELECT * FROM diagnostics WHERE robot_id = '${robotId}'`;
 
