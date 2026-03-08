@@ -2,7 +2,7 @@
 # CodeQL provides JavaScript/TypeScript advanced security scanning via GHAS.
 # Semgrep augments CodeQL with pattern-based scanning for Rust and 30+ languages.
 # GH-500 EXAM TIP: CodeQL uses codeql-action/analyze; third-party tools use upload-sarif
-name: "Code Scanning: CodeQL + Semgrep"
+name: "CodeQL"
 
 on:
   push:
