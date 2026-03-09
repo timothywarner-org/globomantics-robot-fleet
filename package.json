@@ -41,7 +41,7 @@
     "debug": "2.6.8",
     "serialize-javascript": "3.0.0",
     "handlebars": "4.0.0",
-    "ws": "5.2.0",
+    "ws": "5.2.4",
     "tar": "4.4.8",
     "minimist": "1.2.5",
     "node-fetch": "2.6.0",
