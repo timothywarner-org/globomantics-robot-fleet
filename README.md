@@ -4,12 +4,38 @@
 
 This is a fictional internal business application for Globomantics Robotics Corporation's robot fleet management system. This application demonstrates **production-grade GitHub Advanced Security** features used by Fortune 500 companies.
 
-## 🎯 Module 3: Automated Dependency Management
+<!-- TESTING: intentional multi-provider secrets to replicate the course demo -->
+```
+FLEET_CONFIG = {
+    # OpenAI - Robot natural language command interpretation
+    # "Temporary" key from the NLP team - need to rotate this
+    "openai_api_key": "sk-proj-28XieeNe9MpwXOtfnoydlucyMmqIYehuoKX3co1JnaSQ29hf",
 
+    # Azure Storage - Robot telemetry blob storage
+    # Copied from portal during setup, works fine for now
+    "azure_storage_account": "globorobotelemetry",
+    "azure_storage_key": "QtfSkNCmfZfEcJxsDVdSr7C1EpvVvBIP2/arEndJ66T8t1zmT3oBh54bPy2zLw3quutoeZUbtQvSvDGPmd9Tnw==",
+
+    # Stripe - Fleet subscription billing
+    # temp fix for demo day - Ashley said she'd move this to vault
+    "stripe_api_key": "sk_live_0eq5Vt67YebipAQYPTNKo8yU",
+
+    # Globomantics Fleet Command and Control API
+    "fleet_api_key": "glbrt_prod_NPKwob47spY1bNivP16dYurH",
+    "fleet_api_base_url": "https://api.globomantics.com/v2/fleet",
+
+    # Slack - Robot status alert notifications channel
+    # Marcus hooked this up to #fleet-alerts for after-hours notifications
+    "slack_webhook_url": "https://hooks.slack.com/services/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",
+}
+```
+
+## 🎯 Module 3: Automated Dependency Management
+## terererer
 This repository showcases the **complete enterprise security pipeline** that 80% of production teams use in the real world:
 
 ### 🔒 Enterprise Security Features
-
+##
 ✅ **Dependency Review Workflow** (`.github/workflows/dependency.review.yml`)
 - Advanced vulnerability filtering (moderate severity threshold)
 - License compliance checking (allow/deny lists)
